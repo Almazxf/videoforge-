@@ -79,6 +79,9 @@
   .hidden{display:none!important}
   video{width:100%;border-radius:8px;max-height:180px;object-fit:contain;background:#000;margin-bottom:14px}
   .dla{width:100%;justify-content:center;margin-top:12px}
+  .mode-btn{padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-family:'Manrope',sans-serif;font-size:12px;font-weight:600;transition:all .2s}
+  .mode-btn:hover{border-color:var(--accent2);color:var(--text)}
+  .mode-btn.active{border-color:var(--accent);background:rgba(0,229,160,.08);color:var(--accent)}
   @media(max-width:600px){.finfo{grid-template-columns:1fr 1fr}.sc{grid-template-columns:1fr}.qgrid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -127,23 +130,44 @@
   <div class="card hidden" id="step2">
     <div class="ct">03 — Нарезка на фрагменты</div>
     <div class="note note-ok" id="cres"></div>
-    <div class="sc">
-      <div class="ig">
-        <label>Длительность фрагмента</label>
-        <select id="sdur">
-          <option value="30">30 секунд</option>
-          <option value="60" selected>1 минута</option>
-          <option value="90">1.5 минуты</option>
-          <option value="120">2 минуты (макс.)</option>
-          <option value="custom">Своё...</option>
-        </select>
-      </div>
-      <div class="ig hidden" id="cdg">
-        <label>Секунды (10–120)</label>
-        <input type="number" id="cdv" min="10" max="120" value="60">
+
+    <!-- Mode tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="mode-btn active" id="modeUniform" onclick="setMode('uniform')">⏱ По времени</button>
+      <button class="mode-btn" id="modeCustom" onclick="setMode('custom')">✂️ Произвольно</button>
+    </div>
+
+    <!-- Uniform mode -->
+    <div id="modeUniformPanel">
+      <div class="sc">
+        <div class="ig">
+          <label>Длительность фрагмента</label>
+          <select id="sdur">
+            <option value="30">30 секунд</option>
+            <option value="60" selected>1 минута</option>
+            <option value="90">1.5 минуты</option>
+            <option value="120">2 минуты</option>
+            <option value="custom">Своё...</option>
+          </select>
+        </div>
+        <div class="ig hidden" id="cdg">
+          <label>Секунды</label>
+          <input type="number" id="cdv" min="1" max="86400" value="60">
+        </div>
       </div>
     </div>
-    <div id="sprev" style="font-size:12px;color:var(--muted);margin-bottom:14px"></div>
+
+
+    <!-- Custom mode -->
+    <div id="modeCustomPanel" class="hidden">
+      <div class="note note-i">Введи точки разреза через запятую в формате <b>М:СС</b> или <b>СС</b>. Последний фрагмент — автоматически до конца.<br>Пример: <b>5:00, 10:30</b> → три части: 0–5м, 5–10:30, 10:30–конец</div>
+      <div class="ig" style="margin-top:10px">
+        <label>Точки разреза</label>
+        <input type="text" id="cutPoints" placeholder="5:00, 10:30" oninput="updatePrev()">
+      </div>
+    </div>
+
+    <div id="sprev" style="font-size:12px;color:var(--accent);margin-top:12px;margin-bottom:14px;min-height:16px"></div>
     <div class="hidden" id="sprog">
       <div class="pw">
         <div class="ph">
@@ -236,26 +260,78 @@ $('dlcbtn').addEventListener('click',async ()=>{
   await window.api.openFolder(compPath.replace(/[/\\][^/\\]+$/,''));
 });
 
-function getSeg(){ const v=$('sdur').value; if(v==='custom'){const n=parseInt($('cdv').value);return Math.min(120,Math.max(10,isNaN(n)?60:n));}return parseInt(v); }
+let splitMode = 'uniform';
+
+function setMode(m){
+  splitMode = m;
+  ['uniform','custom'].forEach(x=>{
+    $('mode'+x.charAt(0).toUpperCase()+x.slice(1)+'Panel').classList.toggle('hidden', x!==m);
+    $('mode'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active', x===m);
+  });
+  updatePrev();
+}
+
+function parseCutPoints(str, total){
+  // Returns array of {start, dur} segments
+  const parts = str.split(',').map(s=>s.trim()).filter(Boolean);
+  const times = [];
+  for(const p of parts){
+    if(p.includes(':')){
+      const [mm,ss] = p.split(':');
+      times.push(parseInt(mm)*60 + parseFloat(ss));
+    } else {
+      times.push(parseFloat(p));
+    }
+  }
+  // Filter valid times
+  const valid = times.filter(t => !isNaN(t) && t > 0 && t < total).sort((a,b)=>a-b);
+  const points = [0, ...valid, total];
+  return points.slice(0,-1).map((s,i)=>({ start: s, dur: points[i+1]-s }));
+}
+
+function getSegments(){
+  if(!vidDur) return [];
+  if(splitMode==='custom'){
+    const pts = $('cutPoints').value;
+    if(!pts.trim()) return [];
+    return parseCutPoints(pts, vidDur);
+  }
+  // uniform
+  const v=$('sdur').value;
+  const d = v==='custom' ? Math.max(1, parseInt($('cdv').value)||60) : parseInt(v);
+  const cnt = Math.ceil(vidDur/d);
+  return Array.from({length:cnt},(_,i)=>({start:i*d, dur:Math.min(d,vidDur-i*d)}));
+}
+
+function getSeg(){ const v=$('sdur').value; if(v==='custom'){const n=parseInt($('cdv').value);return Math.max(1,isNaN(n)?60:n);}return parseInt(v); }
+
 function updatePrev(){
   if(!vidDur) return;
-  const d=getSeg(),c=Math.ceil(vidDur/d);
-  $('sprev').textContent=`→ ${c} фрагментов по ~${fmtS(d)}`;
+  const segs = getSegments();
+  if(!segs.length){ $('sprev').textContent=''; return; }
+  if(splitMode==='custom'){
+    if(segs.length<2){ $('sprev').textContent='Введи хотя бы одну точку разреза'; return; }
+    $('sprev').textContent=`→ ${segs.length} фрагментов: `+segs.map((s,i)=>`${i+1}) ${fmtS(s.dur)}`).join(' · ');
+  } else {
+    $('sprev').textContent=`→ ${segs.length} фрагментов по ~${fmtS(getSeg())}`;
+  }
 }
 $('sdur').addEventListener('change',function(){ $('cdg').classList.toggle('hidden',this.value!=='custom'); updatePrev(); });
 $('cdv').addEventListener('input',updatePrev);
 
 $('spbtn').addEventListener('click', async ()=>{
   const src=compPath||filePath; if(!src) return;
+  const segs = getSegments();
+  if(!segs.length){ alert('Нет фрагментов для нарезки'); return; }
   const folder=await window.api.pickFolder(); if(!folder) return;
   outDir=folder;
-  const sd=getSeg(), cnt=Math.ceil(vidDur/sd);
+  const cnt=segs.length;
   $('spbtn').disabled=true; show('sprog'); show('slist'); hide('openfbtn');
   const list=$('slist'); list.innerHTML='';
   const t=mkTimer('stimer'); t.start();
 
   for(let i=0;i<cnt;i++){
-    const st=i*sd, d=Math.min(sd,vidDur-st);
+    const {start:st,dur:d}=segs[i];
     const item=document.createElement('div'); item.className='si'; item.id=`si${i}`;
     item.innerHTML=`<div class="sin"><div class="sn">Фрагмент ${i+1} / ${cnt}</div><div class="sm">${fmtS(st)} → ${fmtS(st+d)}</div></div><div class="sa"><span class="badge wait" id="b${i}">ЖДЁТ</span></div>`;
     list.appendChild(item);
@@ -273,8 +349,7 @@ $('spbtn').addEventListener('click', async ()=>{
   });
 
   try {
-    await window.api.split({inputPath:src, segDur:sd, duration:vidDur, outputDir:folder, deleteSrcAfter: src===compPath});
-    // mark last item
+    await window.api.split({inputPath:src, segments:segs, outputDir:folder, deleteSrcAfter: src===compPath});
     const last=cnt-1; $(`si${last}`).className='si rdy'; $(`b${last}`).className='badge ok'; $(`b${last}`).textContent='ГОТОВ';
   } catch(e){ t.stop(); alert('Ошибка нарезки:\n'+e.message); $('spbtn').disabled=false; }
 });
@@ -283,4 +358,3 @@ $('openfbtn').addEventListener('click',()=>{ if(outDir) window.api.openFolder(ou
 </script>
 </body>
 </html>
-
