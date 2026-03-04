@@ -1,0 +1,37 @@
+{
+  "name": "videoforge",
+  "version": "1.0.0",
+  "description": "Video compression and splitting tool",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.videoforge.app",
+    "productName": "VideoForge",
+    "asar": true,
+    "win": {
+      "target": "portable",
+      "icon": "icon.ico"
+    },
+    "extraResources": [
+      {
+        "from": "node_modules/ffmpeg-static/ffmpeg.exe",
+        "to": "ffmpeg.exe"
+      }
+    ],
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html"
+    ]
+  }
+}

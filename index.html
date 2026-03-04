@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VideoForge</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Manrope:wght@300;400;600;800&display=swap');
+  :root{--bg:#0a0a0f;--surface:#111118;--card:#16161f;--border:#2a2a3a;--accent:#00e5a0;--accent2:#7b61ff;--text:#e8e8f0;--muted:#5a5a7a}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;min-height:100vh;overflow-x:hidden;user-select:none}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+  .wrap{max-width:860px;margin:0 auto;padding:36px 20px 60px;position:relative;z-index:1}
+  header{text-align:center;margin-bottom:36px}
+  .logo{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:6px;color:var(--accent);text-transform:uppercase;margin-bottom:10px;opacity:.8}
+  h1{font-size:2.4rem;font-weight:800;letter-spacing:-1px;background:linear-gradient(135deg,#fff 0%,var(--accent) 60%,var(--accent2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;margin-bottom:8px}
+  .subtitle{color:var(--muted);font-size:13px}
+  .uzone{border:2px dashed var(--border);border-radius:18px;padding:50px 40px;text-align:center;cursor:pointer;transition:all .3s;background:var(--card);margin-bottom:20px}
+  .uzone:hover,.uzone.drag{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 16px 50px rgba(0,229,160,.1)}
+  .uico{font-size:52px;margin-bottom:14px;display:block}
+  .uzone h3{font-size:18px;font-weight:600;margin-bottom:6px}
+  .uzone p{color:var(--muted);font-size:12px}
+  #fi{display:none}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px;animation:up .3s ease}
+  @keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .ct{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .ct::after{content:'';flex:1;height:1px;background:var(--border)}
+  .finfo{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px}
+  .fi2{background:var(--surface);border-radius:8px;padding:12px 14px;border:1px solid var(--border)}
+  .fil{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;font-family:'Space Mono',monospace}
+  .fiv{font-size:16px;font-weight:700}
+  .qgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+  .qopt{background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;position:relative;text-align:center}
+  .qopt:hover{border-color:var(--accent2)}
+  .qopt.sel{border-color:var(--accent);background:rgba(0,229,160,.06)}
+  .qopt.sel::before{content:'✓';position:absolute;top:6px;right:8px;color:var(--accent);font-size:11px;font-weight:700}
+  .ql{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;margin-bottom:3px}
+  .qr{font-size:10px;color:var(--muted);margin-bottom:6px}
+  .qs{font-size:12px;color:var(--accent);font-weight:600}
+  .qsv{font-size:10px;color:var(--muted);margin-top:2px}
+  .note{padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:14px;line-height:1.5}
+  .note-i{background:rgba(123,97,255,.08);border:1px solid rgba(123,97,255,.2);color:#b5a8ff}
+  .note-ok{background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);color:var(--accent)}
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:12px 22px;border-radius:9px;border:none;cursor:pointer;font-family:'Manrope',sans-serif;font-weight:700;font-size:13px;transition:all .2s;white-space:nowrap;text-decoration:none}
+  .btn-p{background:var(--accent);color:#0a0a0f}
+  .btn-p:hover:not(:disabled){background:#00ffb3;box-shadow:0 6px 24px rgba(0,229,160,.3);transform:translateY(-1px)}
+  .btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+  .btn-s:hover:not(:disabled){border-color:var(--accent2);color:var(--accent2)}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+  .brow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .pw{margin:14px 0 4px}
+  .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .pl{font-size:12px;color:var(--muted)}
+  .pb{height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+  .pf{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .4s ease;width:0%}
+  .ps{font-size:11px;color:var(--muted);margin-top:5px;font-family:'Space Mono',monospace;min-height:14px}
+  .tb{display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);border-radius:7px;padding:5px 10px;font-family:'Space Mono',monospace;font-size:12px;color:var(--accent)}
+  .td{width:5px;height:5px;background:var(--accent);border-radius:50%;animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .sc{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+  .ig{display:flex;flex-direction:column;gap:5px}
+  .ig label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-family:'Space Mono',monospace}
+  .ig select,.ig input{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text);font-family:'Manrope',sans-serif;font-size:13px;outline:none}
+  .ig select:focus,.ig input:focus{border-color:var(--accent)}
+  .slist{display:flex;flex-direction:column;gap:7px;max-height:300px;overflow-y:auto;padding-right:3px;margin-top:14px}
+  .slist::-webkit-scrollbar{width:3px}
+  .slist::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+  .si{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 14px;transition:all .2s}
+  .si.rdy{border-color:rgba(0,229,160,.3)}
+  .si.run{border-color:var(--accent2);background:rgba(123,97,255,.05)}
+  .sin{display:flex;flex-direction:column;gap:2px}
+  .sn{font-size:12px;font-weight:600}
+  .sm{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace}
+  .sa{display:flex;gap:7px;align-items:center}
+  .badge{font-size:9px;padding:2px 7px;border-radius:5px;font-family:'Space Mono',monospace;letter-spacing:1px}
+  .badge.run{background:rgba(123,97,255,.2);color:var(--accent2)}
+  .badge.ok{background:rgba(0,229,160,.15);color:var(--accent)}
+  .badge.wait{background:rgba(90,90,122,.2);color:var(--muted)}
+  .hidden{display:none!important}
+  video{width:100%;border-radius:8px;max-height:180px;object-fit:contain;background:#000;margin-bottom:14px}
+  .dla{width:100%;justify-content:center;margin-top:12px}
+  @media(max-width:600px){.finfo{grid-template-columns:1fr 1fr}.sc{grid-template-columns:1fr}.qgrid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">⚡ VideoForge</div>
+    <h1>Сжатие и нарезка видео</h1>
+    <p class="subtitle">Нативный ffmpeg · молниеносная скорость · без интернета</p>
+  </header>
+
+  <div class="uzone" id="uzone">
+    <span class="uico">🎬</span>
+    <h3>Перетащи видео сюда</h3>
+    <p>или нажми для выбора · MP4, MOV, AVI, MKV, WebM</p>
+    <input type="file" id="fi" accept="video/*">
+  </div>
+
+  <div class="card hidden" id="step1">
+    <div class="ct">01 — Исходный файл</div>
+    <video id="vp" controls></video>
+    <div class="finfo">
+      <div class="fi2"><div class="fil">Размер</div><div class="fiv" id="osize">—</div></div>
+      <div class="fi2"><div class="fil">Длительность</div><div class="fiv" id="odur">—</div></div>
+      <div class="fi2"><div class="fil">Разрешение</div><div class="fiv" id="ores">—</div></div>
+    </div>
+    <div class="ct">02 — Выбери качество</div>
+    <div class="note note-i">ℹ️ Оценочный размер на основе типичного видео.</div>
+    <div class="qgrid" id="qgrid"></div>
+    <div class="hidden" id="cprog">
+      <div class="pw">
+        <div class="ph">
+          <span class="pl" id="clbl">Сжатие...</span>
+          <div class="tb"><div class="td"></div><span id="ctimer">00:00</span></div>
+        </div>
+        <div class="pb"><div class="pf" id="cfill" style="width:0%"></div></div>
+        <div class="ps" id="cst"></div>
+      </div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-p" id="cbtn" disabled>⚡ Сжать видео</button>
+      <span id="chint" style="font-size:12px;color:var(--muted)">← выберите качество</span>
+    </div>
+  </div>
+
+  <div class="card hidden" id="step2">
+    <div class="ct">03 — Нарезка на фрагменты</div>
+    <div class="note note-ok" id="cres"></div>
+    <div class="sc">
+      <div class="ig">
+        <label>Длительность фрагмента</label>
+        <select id="sdur">
+          <option value="30">30 секунд</option>
+          <option value="60" selected>1 минута</option>
+          <option value="90">1.5 минуты</option>
+          <option value="120">2 минуты (макс.)</option>
+          <option value="custom">Своё...</option>
+        </select>
+      </div>
+      <div class="ig hidden" id="cdg">
+        <label>Секунды (10–120)</label>
+        <input type="number" id="cdv" min="10" max="120" value="60">
+      </div>
+    </div>
+    <div id="sprev" style="font-size:12px;color:var(--muted);margin-bottom:14px"></div>
+    <div class="hidden" id="sprog">
+      <div class="pw">
+        <div class="ph">
+          <span class="pl" id="slbl">Нарезка...</span>
+          <div class="tb"><div class="td"></div><span id="stimer">00:00</span></div>
+        </div>
+        <div class="pb"><div class="pf" id="sfill" style="width:0%"></div></div>
+        <div class="ps" id="sst"></div>
+      </div>
+    </div>
+    <div class="brow" style="margin-bottom:14px">
+      <button class="btn btn-p" id="spbtn">✂️ Нарезать фрагменты</button>
+      <button class="btn btn-s" id="dlcbtn">⬇️ Скачать сжатое</button>
+    </div>
+    <div class="slist hidden" id="slist"></div>
+    <button class="btn btn-p dla hidden" id="openfbtn">📂 Открыть папку с фрагментами</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const show = id => $(id).classList.remove('hidden');
+const hide = id => $(id).classList.add('hidden');
+const fmt = b => b < 1048576 ? (b/1024).toFixed(1)+' КБ' : (b/1048576).toFixed(1)+' МБ';
+const fmtS = s => { const m=Math.floor(s/60),sc=Math.floor(s%60); return m?`${m}м ${sc}с`:`${sc}с`; };
+function mkTimer(id){ let iv; return { start(){ const t=Date.now(); iv=setInterval(()=>{ const s=Math.floor((Date.now()-t)/1000); $(id).textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; },500); }, stop(){ clearInterval(iv); } }; }
+
+let filePath=null, compPath=null, vidDur=0, selQ=null, outDir=null;
+
+const PRESETS=[
+  {label:'1080p',h:1080,crf:23,name:'Full HD',r:1.0},
+  {label:'720p', h:720, crf:26,name:'HD',     r:0.55},
+  {label:'480p', h:480, crf:28,name:'SD',     r:0.30},
+  {label:'360p', h:360, crf:30,name:'Низкое', r:0.18},
+];
+
+function renderQ(fsize, origH){
+  const g=$('qgrid'); g.innerHTML='';
+  PRESETS.forEach(q=>{
+    if(q.h>origH*1.1) return;
+    const d=document.createElement('div'); d.className='qopt';
+    d.innerHTML=`<div class="ql">${q.label}</div><div class="qr">${q.name}</div><div class="qs">~${fmt(fsize*q.r)}</div><div class="qsv">−${Math.round((1-q.r)*100)}%</div>`;
+    d.addEventListener('click',()=>{ document.querySelectorAll('.qopt').forEach(e=>e.classList.remove('sel')); d.classList.add('sel'); selQ=q; $('cbtn').disabled=false; hide('chint'); });
+    g.appendChild(d);
+  });
+}
+
+$('uzone').addEventListener('click',()=>$('fi').click());
+$('fi').addEventListener('change',e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+$('uzone').addEventListener('dragover',e=>{ e.preventDefault(); $('uzone').classList.add('drag'); });
+$('uzone').addEventListener('dragleave',()=>$('uzone').classList.remove('drag'));
+$('uzone').addEventListener('drop',e=>{ e.preventDefault(); $('uzone').classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
+
+async function loadFile(f){
+  filePath=f.path; compPath=null;
+  $('osize').textContent=fmt(f.size);
+  $('vp').src=URL.createObjectURL(f);
+  const info=await window.api.videoInfo(filePath);
+  vidDur=info.duration;
+  $('odur').textContent=fmtS(info.duration);
+  $('ores').textContent=info.width&&info.height?`${info.width}×${info.height}`:'—';
+  renderQ(f.size, info.height||1080);
+  show('step1'); hide('step2'); updatePrev();
+}
+
+$('cbtn').addEventListener('click', async ()=>{
+  if(!selQ||!filePath) return;
+  $('cbtn').disabled=true; show('cprog'); $('cfill').style.width='0%';
+  const t=mkTimer('ctimer'); t.start();
+  window.api.off('compress-progress');
+  window.api.on('compress-progress', r=>{
+    $('cfill').style.width=Math.round(r*100)+'%';
+    $('cst').textContent=`Кодирование... ${Math.round(r*100)}%`;
+    $('clbl').textContent=`Сжатие до ${selQ.label}...`;
+  });
+  try {
+    const res=await window.api.compress({inputPath:filePath, height:selQ.h, crf:selQ.crf});
+    compPath=res.outputPath; t.stop(); $('cfill').style.width='100%';
+    const sav=((1-res.size/parseInt($('osize').textContent))*100); // approx
+    $('cres').textContent=`✅ Готово! Сохранено: ${fmt(res.size)}  (файл рядом с оригиналом)`;
+    show('step2'); $('step2').scrollIntoView({behavior:'smooth'}); updatePrev();
+  } catch(e){ t.stop(); alert('Ошибка сжатия:\n'+e.message); }
+  $('cbtn').disabled=false;
+});
+
+$('dlcbtn').addEventListener('click',async ()=>{
+  if(!compPath) return;
+  // open folder so user can find the file
+  await window.api.openFolder(compPath.replace(/[/\\][^/\\]+$/,''));
+});
+
+function getSeg(){ const v=$('sdur').value; if(v==='custom'){const n=parseInt($('cdv').value);return Math.min(120,Math.max(10,isNaN(n)?60:n));}return parseInt(v); }
+function updatePrev(){
+  if(!vidDur) return;
+  const d=getSeg(),c=Math.ceil(vidDur/d);
+  $('sprev').textContent=`→ ${c} фрагментов по ~${fmtS(d)}`;
+}
+$('sdur').addEventListener('change',function(){ $('cdg').classList.toggle('hidden',this.value!=='custom'); updatePrev(); });
+$('cdv').addEventListener('input',updatePrev);
+
+$('spbtn').addEventListener('click', async ()=>{
+  const src=compPath||filePath; if(!src) return;
+  const folder=await window.api.pickFolder(); if(!folder) return;
+  outDir=folder;
+  const sd=getSeg(), cnt=Math.ceil(vidDur/sd);
+  $('spbtn').disabled=true; show('sprog'); show('slist'); hide('openfbtn');
+  const list=$('slist'); list.innerHTML='';
+  const t=mkTimer('stimer'); t.start();
+
+  for(let i=0;i<cnt;i++){
+    const st=i*sd, d=Math.min(sd,vidDur-st);
+    const item=document.createElement('div'); item.className='si'; item.id=`si${i}`;
+    item.innerHTML=`<div class="sin"><div class="sn">Фрагмент ${i+1} / ${cnt}</div><div class="sm">${fmtS(st)} → ${fmtS(st+d)}</div></div><div class="sa"><span class="badge wait" id="b${i}">ЖДЁТ</span></div>`;
+    list.appendChild(item);
+  }
+
+  window.api.off('split-progress');
+  window.api.on('split-progress', ({index,count,start,dur,done})=>{
+    if(done){ t.stop(); $('slbl').textContent=`✓ ${count} фрагментов готовы`; $('sfill').style.width='100%'; show('openfbtn'); $('spbtn').disabled=false; return; }
+    if(index>0){ $(`si${index-1}`).className='si rdy'; $(`b${index-1}`).className='badge ok'; $(`b${index-1}`).textContent='ГОТОВ'; }
+    $(`si${index}`).className='si run'; $(`b${index}`).className='badge run'; $(`b${index}`).textContent='НАРЕЗКА';
+    $('slbl').textContent=`Фрагмент ${index+1} из ${count}`;
+    $('sst').textContent=`${fmtS(start)} – ${fmtS(start+dur)}`;
+    $('sfill').style.width=(index/count*100)+'%';
+    $(`si${index}`).scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+
+  try {
+    await window.api.split({inputPath:src, segDur:sd, duration:vidDur, outputDir:folder});
+    // mark last item
+    const last=cnt-1; $(`si${last}`).className='si rdy'; $(`b${last}`).className='badge ok'; $(`b${last}`).textContent='ГОТОВ';
+  } catch(e){ t.stop(); alert('Ошибка нарезки:\n'+e.message); $('spbtn').disabled=false; }
+});
+
+$('openfbtn').addEventListener('click',()=>{ if(outDir) window.api.openFolder(outDir); });
+</script>
+</body>
+</html>
