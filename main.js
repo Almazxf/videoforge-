@@ -74,7 +74,6 @@ ipcMain.handle('video-info', async (e, filePath) => {
 })
 
 ipcMain.handle('compress', async (e, { inputPath, height, crf }) => {
-  // Ask user where to save — no file left behind without permission
   const { filePath: out, canceled } = await dialog.showSaveDialog(win, {
     title: 'Сохранить сжатое видео',
     defaultPath: inputPath.replace(/\.[^.]+$/, `_compressed_${height}p.mp4`),
@@ -89,10 +88,11 @@ ipcMain.handle('compress', async (e, { inputPath, height, crf }) => {
     '-c:v', 'libx264', '-crf', String(crf), '-preset', 'fast',
     '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', out
   ], r => win.webContents.send('compress-progress', r))
+
   return { outputPath: out, size: fs.statSync(out).size }
 })
 
-ipcMain.handle('split', async (e, { inputPath, segments, outputDir }) => {
+ipcMain.handle('split', async (e, { inputPath, segments, outputDir, deleteSrcAfter }) => {
   const count = segments.length
   for (let i = 0; i < count; i++) {
     const { start, dur } = segments[i]
@@ -103,12 +103,20 @@ ipcMain.handle('split', async (e, { inputPath, segments, outputDir }) => {
       '-t', String(dur), '-c', 'copy', '-avoid_negative_ts', 'make_zero', out
     ], null)
   }
+  if (deleteSrcAfter && fs.existsSync(inputPath)) {
+    try { fs.unlinkSync(inputPath) } catch(e) {}
+  }
   win.webContents.send('split-progress', { index: count, count, done: true })
 })
 
 ipcMain.handle('pick-folder', async () => {
-  const r = await dialog.showOpenDialog(win, { properties: ['openDirectory'], title: 'Выбери папку для фрагментов', buttonLabel: 'Выбрать папку' })
+  const r = await dialog.showOpenDialog(win, {
+    properties: ['openDirectory'],
+    title: 'Выбери папку для фрагментов',
+    buttonLabel: 'Выбрать папку'
+  })
   return r.filePaths[0] || null
 })
 
 ipcMain.handle('open-folder', (e, p) => shell.openPath(p))
+
