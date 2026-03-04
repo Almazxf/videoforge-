@@ -355,7 +355,7 @@ $('spbtn').addEventListener('click', async ()=>{
   });
 
   try {
-    await window.api.split({inputPath:src, segments:segs, outputDir:folder});
+    await window.api.split({inputPath:src, segments:segs, outputDir:folder, deleteSrcAfter: src===compPath});
   } catch(e){ t.stop(); alert('Ошибка нарезки:\n'+e.message); $('spbtn').disabled=false; }
 });
 
