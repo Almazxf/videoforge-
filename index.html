@@ -221,9 +221,10 @@ $('cbtn').addEventListener('click', async ()=>{
   });
   try {
     const res=await window.api.compress({inputPath:filePath, height:selQ.h, crf:selQ.crf});
-    compPath=res.outputPath; t.stop(); $('cfill').style.width='100%';
-    const sav=((1-res.size/parseInt($('osize').textContent))*100); // approx
-    $('cres').textContent=`✅ Готово! Сохранено: ${fmt(res.size)}  (файл рядом с оригиналом)`;
+    t.stop();
+    if(res.canceled){ $('cfill').style.width='0%'; $('cst').textContent='Отменено.'; $('cbtn').disabled=false; return; }
+    compPath=res.outputPath; $('cfill').style.width='100%';
+    $('cres').textContent=`✅ Готово! ${fmt(res.size)} — сохранено в указанное место.`;
     show('step2'); $('step2').scrollIntoView({behavior:'smooth'}); updatePrev();
   } catch(e){ t.stop(); alert('Ошибка сжатия:\n'+e.message); }
   $('cbtn').disabled=false;
@@ -272,7 +273,7 @@ $('spbtn').addEventListener('click', async ()=>{
   });
 
   try {
-    await window.api.split({inputPath:src, segDur:sd, duration:vidDur, outputDir:folder});
+    await window.api.split({inputPath:src, segDur:sd, duration:vidDur, outputDir:folder, deleteSrcAfter: src===compPath});
     // mark last item
     const last=cnt-1; $(`si${last}`).className='si rdy'; $(`b${last}`).className='badge ok'; $(`b${last}`).textContent='ГОТОВ';
   } catch(e){ t.stop(); alert('Ошибка нарезки:\n'+e.message); $('spbtn').disabled=false; }
@@ -282,3 +283,4 @@ $('openfbtn').addEventListener('click',()=>{ if(outDir) window.api.openFolder(ou
 </script>
 </body>
 </html>
+
