@@ -192,7 +192,7 @@ const $ = id => document.getElementById(id);
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
 const fmt = b => b < 1048576 ? (b/1024).toFixed(1)+' КБ' : (b/1048576).toFixed(1)+' МБ';
-const fmtS = s => { const m=Math.floor(s/60),sc=Math.floor(s%60); return m?`${m}м ${sc}с`:`${sc}с`; };
+const fmtS = s => { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=Math.floor(s%60); return h?`${h}ч ${m}м ${sc}с`:m?`${m}м ${sc}с`:`${sc}с`; };
 function mkTimer(id){ let iv; return { start(){ const t=Date.now(); iv=setInterval(()=>{ const s=Math.floor((Date.now()-t)/1000); $(id).textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; },500); }, stop(){ clearInterval(iv); } }; }
 
 let filePath=null, compPath=null, vidDur=0, selQ=null, outDir=null;
@@ -221,16 +221,22 @@ $('uzone').addEventListener('dragover',e=>{ e.preventDefault(); $('uzone').class
 $('uzone').addEventListener('dragleave',()=>$('uzone').classList.remove('drag'));
 $('uzone').addEventListener('drop',e=>{ e.preventDefault(); $('uzone').classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
 
+let _prevBlobURL = null;
 async function loadFile(f){
-  filePath=f.path; compPath=null;
+  if(_prevBlobURL){ URL.revokeObjectURL(_prevBlobURL); _prevBlobURL=null; }
+  filePath=f.path; compPath=null; selQ=null; outDir=null;
   $('osize').textContent=fmt(f.size);
-  $('vp').src=URL.createObjectURL(f);
+  _prevBlobURL = URL.createObjectURL(f);
+  $('vp').src=_prevBlobURL;
+  $('cbtn').disabled=true; hide('chint');
+  document.querySelectorAll('.qopt').forEach(e=>e.classList.remove('sel'));
+  hide('cprog'); $('cfill').style.width='0%';
   const info=await window.api.videoInfo(filePath);
   vidDur=info.duration;
   $('odur').textContent=fmtS(info.duration);
   $('ores').textContent=info.width&&info.height?`${info.width}×${info.height}`:'—';
   renderQ(f.size, info.height||1080);
-  show('step1'); hide('step2'); updatePrev();
+  show('step1'); hide('step2'); show('chint'); updatePrev();
 }
 
 $('cbtn').addEventListener('click', async ()=>{
@@ -255,8 +261,7 @@ $('cbtn').addEventListener('click', async ()=>{
 });
 
 $('dlcbtn').addEventListener('click',async ()=>{
-  if(!compPath) return;
-  // open folder so user can find the file
+  if(!compPath){ alert('Сначала сожмите видео'); return; }
   await window.api.openFolder(compPath.replace(/[/\\][^/\\]+$/,''));
 });
 
@@ -272,18 +277,20 @@ function setMode(m){
 }
 
 function parseCutPoints(str, total){
-  // Returns array of {start, dur} segments
   const parts = str.split(',').map(s=>s.trim()).filter(Boolean);
   const times = [];
   for(const p of parts){
+    let sec = 0;
     if(p.includes(':')){
-      const [mm,ss] = p.split(':');
-      times.push(parseInt(mm)*60 + parseFloat(ss));
+      const chunks = p.split(':');
+      // support H:MM:SS or M:SS
+      if(chunks.length===3) sec = +chunks[0]*3600 + +chunks[1]*60 + parseFloat(chunks[2]);
+      else sec = +chunks[0]*60 + parseFloat(chunks[1]);
     } else {
-      times.push(parseFloat(p));
+      sec = parseFloat(p);
     }
+    times.push(sec);
   }
-  // Filter valid times
   const valid = times.filter(t => !isNaN(t) && t > 0 && t < total).sort((a,b)=>a-b);
   const points = [0, ...valid, total];
   return points.slice(0,-1).map((s,i)=>({ start: s, dur: points[i+1]-s }));
@@ -310,7 +317,6 @@ function updatePrev(){
   const segs = getSegments();
   if(!segs.length){ $('sprev').textContent=''; return; }
   if(splitMode==='custom'){
-    if(segs.length<2){ $('sprev').textContent='Введи хотя бы одну точку разреза'; return; }
     $('sprev').textContent=`→ ${segs.length} фрагментов: `+segs.map((s,i)=>`${i+1}) ${fmtS(s.dur)}`).join(' · ');
   } else {
     $('sprev').textContent=`→ ${segs.length} фрагментов по ~${fmtS(getSeg())}`;
@@ -349,8 +355,7 @@ $('spbtn').addEventListener('click', async ()=>{
   });
 
   try {
-    await window.api.split({inputPath:src, segments:segs, outputDir:folder, deleteSrcAfter: src===compPath});
-    const last=cnt-1; $(`si${last}`).className='si rdy'; $(`b${last}`).className='badge ok'; $(`b${last}`).textContent='ГОТОВ';
+    await window.api.split({inputPath:src, segments:segs, outputDir:folder});
   } catch(e){ t.stop(); alert('Ошибка нарезки:\n'+e.message); $('spbtn').disabled=false; }
 });
 
