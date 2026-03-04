@@ -74,7 +74,14 @@ ipcMain.handle('video-info', async (e, filePath) => {
 })
 
 ipcMain.handle('compress', async (e, { inputPath, height, crf }) => {
-  const out = inputPath.replace(/\.[^.]+$/, `_compressed_${height}p.mp4`)
+  // Ask user where to save — no file left behind without permission
+  const { filePath: out, canceled } = await dialog.showSaveDialog(win, {
+    title: 'Сохранить сжатое видео',
+    defaultPath: inputPath.replace(/\.[^.]+$/, `_compressed_${height}p.mp4`),
+    filters: [{ name: 'MP4', extensions: ['mp4'] }]
+  })
+  if (canceled || !out) return { canceled: true }
+
   await runFFmpeg([
     '-y', '-i', inputPath,
     '-vf', `scale=-2:${height}`,
@@ -84,7 +91,7 @@ ipcMain.handle('compress', async (e, { inputPath, height, crf }) => {
   return { outputPath: out, size: fs.statSync(out).size }
 })
 
-ipcMain.handle('split', async (e, { inputPath, segDur, duration, outputDir }) => {
+ipcMain.handle('split', async (e, { inputPath, segDur, duration, outputDir, deleteSrcAfter }) => {
   const count = Math.ceil(duration / segDur)
   for (let i = 0; i < count; i++) {
     const start = i * segDur
@@ -96,6 +103,10 @@ ipcMain.handle('split', async (e, { inputPath, segDur, duration, outputDir }) =>
       '-t', String(dur), '-c', 'copy', '-avoid_negative_ts', 'make_zero', out
     ], null)
   }
+  // Delete the compressed temp file after splitting if requested
+  if (deleteSrcAfter && fs.existsSync(inputPath)) {
+    try { fs.unlinkSync(inputPath) } catch(e) {}
+  }
   win.webContents.send('split-progress', { index: count, count, done: true })
 })
 
@@ -105,3 +116,4 @@ ipcMain.handle('pick-folder', async () => {
 })
 
 ipcMain.handle('open-folder', (e, p) => shell.openPath(p))
+
