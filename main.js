@@ -98,10 +98,23 @@ ipcMain.handle('split', async (e, { inputPath, segments, outputDir, deleteSrcAft
     const { start, dur } = segments[i]
     const out = path.join(outputDir, `fragment_${String(i+1).padStart(2,'0')}.mp4`)
     win.webContents.send('split-progress', { index: i, count, start, dur })
-    await runFFmpeg([
-      '-y', '-ss', String(start), '-i', inputPath,
-      '-t', String(dur), '-c', 'copy', '-avoid_negative_ts', 'make_zero', out
-    ], null)
+
+    if (start === 0) {
+      // Первый фрагмент — просто копируем, подтормаживания нет
+      await runFFmpeg([
+        '-y', '-i', inputPath,
+        '-t', String(dur),
+        '-c', 'copy', '-avoid_negative_ts', 'make_zero', out
+      ], null)
+    } else {
+      // Остальные — точный seek: -ss после -i медленнее но без артефактов
+      await runFFmpeg([
+        '-y', '-i', inputPath,
+        '-ss', String(start),
+        '-t', String(dur),
+        '-c', 'copy', '-avoid_negative_ts', 'make_zero', out
+      ], null)
+    }
   }
   if (deleteSrcAfter && fs.existsSync(inputPath)) {
     try { fs.unlinkSync(inputPath) } catch(e) {}
@@ -119,4 +132,3 @@ ipcMain.handle('pick-folder', async () => {
 })
 
 ipcMain.handle('open-folder', (e, p) => shell.openPath(p))
-
